@@ -70,19 +70,29 @@ def self_loop(data):
     return direction
 
 
-# n: select the n-th nearest food as target.
-def shortest_path(data, n):
+def deadend(data, path, you_body, depth):
+    if depth == 3:
+        return False
+
+    steps = len(path)-1
     blocked = []
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
+        body = snakes["body"]
+        # Their body will move away after these steps.
+        if len(body) <= steps:
+            continue
+        else:
+            body = body[:-steps]
         for cell in snakes["body"]:
             blocked += [(cell["x"], cell["y"])]
-    you_body = []
-    for cell in data["you"]["body"]:
-        you_body += [(cell["x"], cell["y"])]
+
+    # Your body after eating the target food.
+    you_body = (list(reversed(path[1:])) + you_body)[:-(steps+1)]
     blocked += you_body[1:]
-    print("blocked: {}".format(blocked))
+
+    #print("blocked: {}".format(blocked))
 
     graph = Graph()
     #print("Edges: ", end="")
@@ -101,33 +111,85 @@ def shortest_path(data, n):
     #print()
     cost_func = lambda u, v, e, prev_e: e['cost']
 
-    head = data["you"]["body"][0]
+    head = you_body[0]
     foods = {}
     for food in data["board"]["food"]:
         key = (food["x"], food["y"])
-        foods[key] = abs(head["x"] - food["x"]) + abs(head["y"] - food["y"])
-    nearest_food = sorted(foods.items(), key=operator.itemgetter(1))[n][0]
+        foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
+    foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
 
-    head = (head["x"], head["y"])
-    # If the nearest food can not be reached, go for the 2nd nearest one.
-    try:
-        path = find_path(graph, head, nearest_food, cost_func=cost_func).nodes
-    except Exception:
-        return shortest_path(data, n+1)
-    next_block = path[1]
+    # Skip the nearest ones that have been eaten.
+    for food in foods_sorted[depth:]:
+        # If the nearest food can not be reached, go for the next nearest one.
+        try:
+            nodes = find_path(graph, head, food[0], cost_func=cost_func).nodes
+            print("Can still go for food {}.".format(food[0]))
+            return deadend(data, nodes, you_body, depth+1)
+        except Exception:
+            continue
+    return True
 
-    print("head: {}".format(head))
-    print("nearest_food: {}".format(nearest_food))
-    print("path: {}".format(path))
 
-    if head[0] == next_block[0] and head[1] > next_block[1]:
-        return "up"
-    elif head[0] == next_block[0] and head[1] < next_block[1]:
-        return "down"
-    elif head[0] < next_block[0] and head[1] == next_block[1]:
-        return "right"
-    else:
-        return "left"
+def dijkstra(data):
+    blocked = []
+    for snake in data["board"]["snakes"]:
+        if snake == data["you"]:
+            continue
+        for cell in snakes["body"]:
+            blocked += [(cell["x"], cell["y"])]
+    you_body = []
+    for cell in data["you"]["body"]:
+        you_body += [(cell["x"], cell["y"])]
+    blocked += you_body[1:]
+
+    graph = Graph()
+    #print("Edges: ", end="")
+    for x in range(0, data["board"]["width"]):
+        for y in range(0, data["board"]["height"]):
+            if (x, y) in blocked:
+                continue
+            if (x+1, y) not in blocked and x != data["board"]["width"]-1:
+                graph.add_edge((x, y), (x+1, y), {'cost': 1})
+                graph.add_edge((x+1, y), (x, y), {'cost': 1})
+                #print("({}, {})-({}, {}) ".format(x, y, x+1, y), end="")
+            if (x, y+1) not in blocked and y != data["board"]["height"]-1:
+                graph.add_edge((x, y), (x, y+1), {'cost': 1})
+                graph.add_edge((x, y+1), (x, y), {'cost': 1})
+                #print("({}, {})-({}, {}) ".format(x, y, x, y+1), end="")
+    #print()
+    cost_func = lambda u, v, e, prev_e: e['cost']
+
+    head = you_body[0]
+    foods = {}
+    for food in data["board"]["food"]:
+        key = (food["x"], food["y"])
+        foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
+    foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
+
+    for food in foods_sorted:
+        # If the nearest food can not be reached, go for the next nearest one.
+        try:
+            nodes = find_path(graph, head, food[0], cost_func=cost_func).nodes
+            print("Going for food {}.".format(food[0]))
+            if deadend(data, nodes, you_body, 1):
+                print("Dead-end.")
+                continue
+            else:
+                next_block = nodes[1]
+                if head[0] == next_block[0] and head[1] > next_block[1]:
+                    return "up"
+                elif head[0] == next_block[0] and head[1] < next_block[1]:
+                    return "down"
+                elif head[0] < next_block[0] and head[1] == next_block[1]:
+                    return "right"
+                else:
+                    return "left"
+        except Exception:
+            continue
+
+    # ..Where do we go now?
+    print("Who am I? Where am I?")
+    return False
 
 
 @bottle.post('/move')
@@ -149,9 +211,9 @@ def move():
     # Kill snake in parallel.
 
     # Go for a food.
-    direction = shortest_path(data, 0)
-    print(direction)
+    direction = dijkstra(data)
 
+    #print(direction)
     return move_response(direction)
 
 
@@ -163,7 +225,7 @@ def end():
     TODO: If your snake AI was stateful,
         clean up any stateful objects here.
     """
-    print(json.dumps(data))
+    #print(json.dumps(data))
 
     return end_response()
 
