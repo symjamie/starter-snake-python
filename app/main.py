@@ -70,28 +70,35 @@ def self_loop(data):
     return direction
 
 
-def shortest_path(data):
+# n: select the n-th nearest food as target.
+def shortest_path(data, n):
     blocked = []
-    for snakes in data["board"]["snakes"]:
-        blocked += snakes["body"]
-    blocked += data["you"]["body"][1:]
+    for snake in data["board"]["snakes"]:
+        if snake == data["you"]:
+            continue
+        for cell in snakes["body"]:
+            blocked += [(cell["x"], cell["y"])]
+    you_body = []
+    for cell in data["you"]["body"]:
+        you_body += [(cell["x"], cell["y"])]
+    blocked += you_body[1:]
     print("blocked: {}".format(blocked))
 
     graph = Graph()
-    print("Edges: ", end="")
+    #print("Edges: ", end="")
     for x in range(0, data["board"]["width"]):
         for y in range(0, data["board"]["height"]):
-            if {"x": x, "y": y} in blocked:
+            if (x, y) in blocked:
                 continue
-            if {"x": x+1, "y": y} not in blocked and x != data["board"]["width"]-1:
+            if (x+1, y) not in blocked and x != data["board"]["width"]-1:
                 graph.add_edge((x, y), (x+1, y), {'cost': 1})
                 graph.add_edge((x+1, y), (x, y), {'cost': 1})
-                print("({}, {})-({}, {}) ".format(x, y, x+1, y), end="")
-            if {"x": x, "y": y+1} not in blocked and y != data["board"]["height"]-1:
+                #print("({}, {})-({}, {}) ".format(x, y, x+1, y), end="")
+            if (x, y+1) not in blocked and y != data["board"]["height"]-1:
                 graph.add_edge((x, y), (x, y+1), {'cost': 1})
                 graph.add_edge((x, y+1), (x, y), {'cost': 1})
-                print("({}, {})-({}, {}) ".format(x, y, x, y+1), end="")
-    print()
+                #print("({}, {})-({}, {}) ".format(x, y, x, y+1), end="")
+    #print()
     cost_func = lambda u, v, e, prev_e: e['cost']
 
     head = data["you"]["body"][0]
@@ -99,10 +106,14 @@ def shortest_path(data):
     for food in data["board"]["food"]:
         key = (food["x"], food["y"])
         foods[key] = abs(head["x"] - food["x"]) + abs(head["y"] - food["y"])
-    nearest_food = sorted(foods.items(), key=operator.itemgetter(1))[0][0]
+    nearest_food = sorted(foods.items(), key=operator.itemgetter(1))[n][0]
 
     head = (head["x"], head["y"])
-    path = find_path(graph, head, nearest_food, cost_func=cost_func).nodes
+    # If the nearest food can not be reached, go for the 2nd nearest one.
+    try:
+        path = find_path(graph, head, nearest_food, cost_func=cost_func).nodes
+    except Exception:
+        return shortest_path(data, n+1)
     next_block = path[1]
 
     print("head: {}".format(head))
@@ -118,6 +129,7 @@ def shortest_path(data):
     else:
         return "left"
 
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -129,9 +141,15 @@ def move():
 
     #print(json.dumps(data))
 
+    # The dumbest way...
     #return move_response(self_loop(data))
 
-    direction = shortest_path(data)
+    # Avoid being killed.
+
+    # Kill snake in parallel.
+
+    # Go for a food.
+    direction = shortest_path(data, 0)
     print(direction)
 
     return move_response(direction)
