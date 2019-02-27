@@ -129,7 +129,12 @@ def dijkstra(data, self_loop):
     if not self_loop:
         blocked += you_body[1:]
     else:
-        blocked += you_body[1:-1]
+        # Just ate a food.
+        dist = abs(you_body[0][0] - you_body[-1][0]) + abs(you_body[0][1] - you_body[-1][1])
+        if you_body[-1] == you_body[-2] and dist > 1:
+            blocked += you_body[1:-2]
+        else:
+            blocked += you_body[1:-1]
 
     graph = Graph()
     #print("Edges: ", end="")
@@ -177,7 +182,6 @@ def dijkstra(data, self_loop):
                     print("Dead-end.")
                     continue
                 else:
-                    print("OK, {}".format(direction))
                     return direction
             # No path.
             except Exception as e:
@@ -260,7 +264,7 @@ def move():
         if direction == False:
             direction = dijkstra(data, False)
 
-    print(direction)
+    #print(direction)
     return move_response(direction)
 
 
