@@ -58,7 +58,7 @@ def deadend(data, path, you_body, depth):
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
-        body = snakes["body"]
+        body = snake["body"]
         # Their body will move away after these steps.
         if len(body) <= steps:
             continue
