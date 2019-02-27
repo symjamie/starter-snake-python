@@ -211,7 +211,9 @@ def move():
     # Kill snake in parallel.
 
     # Go for a food.
-    direction = dijkstra(data)
+    #direction = dijkstra(data)
+    directions = ['up', 'down', 'left', 'right']
+    direction = random.choice(directions)
 
     #print(direction)
     return move_response(direction)
