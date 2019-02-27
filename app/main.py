@@ -50,7 +50,7 @@ def start():
 
 
 def deadend(data, path, you_body, depth):
-    if depth == 1:
+    if depth == 3:
         return False
 
     steps = len(path)-1
@@ -200,27 +200,6 @@ def dijkstra(data, self_loop):
             return False
 
 
-# Currently only work for a length of 3.
-def self_loop(data):
-    my_body = data["you"]["body"]
-    my_head = my_body[0]
-    my_neck = my_body[1]
-    if my_head["x"] == my_neck["x"] and my_head["y"] == my_neck["y"]:
-        return
-    if my_head["x"] > my_neck["x"]:
-        last_move = "right"
-    elif my_head["x"] < my_neck["x"]:
-        last_move = "left"
-    elif my_head["y"] < my_neck["y"]:
-        last_move = "up"
-    elif my_head["y"] > my_neck["y"]:
-        last_move = "down"
-    directions = ['up', 'right', 'down', 'left']
-    idx = directions.index(last_move)
-    direction = directions[(idx+1)%4]
-    return direction
-
-
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -231,10 +210,6 @@ def move():
     """
 
     #print(json.dumps(data))
-    return move_response(self_loop(data))
-    # Avoid being killed.
-
-    # Kill snake.
 
     if data["you"]["health"] < 50:
         # Go for a food.
