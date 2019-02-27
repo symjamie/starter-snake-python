@@ -65,7 +65,7 @@ def deadend(data, path, you_body, foods_eaten, depth):
             continue
         else:
             body = body[:-steps]
-        for cell in snakes["body"]:
+        for cell in snake["body"]:
             blocked += [(cell["x"], cell["y"])]
 
     # Your body after eating the target food.
@@ -175,7 +175,8 @@ def dijkstra(data, self_loop):
                         return "right"
                     else:
                         return "left"
-            except Exception:
+            except Exception as e:
+                print(e)
                 continue
 
         # ..Where do we go now?
@@ -228,7 +229,7 @@ def move():
         if direction == False:
             direction = dijkstra(data, False)
 
-    #print(direction)
+    print(direction)
     return move_response(direction)
 
 
