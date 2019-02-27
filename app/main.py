@@ -115,7 +115,7 @@ def dijkstra(data, self_loop):
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
-        for cell in snakes["body"]:
+        for cell in snake["body"]:
             blocked += [(cell["x"], cell["y"])]
     you_body = []
     for cell in data["you"]["body"]:
