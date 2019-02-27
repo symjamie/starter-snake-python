@@ -50,7 +50,7 @@ def start():
 
 
 def deadend(data, path, you_body, depth):
-    if depth == 3:
+    if depth == 2:
         return False
 
     steps = len(path)-1
