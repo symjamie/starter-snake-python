@@ -206,6 +206,26 @@ def dijkstra(data, self_loop):
             return False
 
 
+def strech(data):
+    body = data["you"]["body"]
+    head = body[0]
+    neck = body[1]
+    if head["x"] == neck["x"] and head["y"] == neck["y"]:
+        return "right"
+    if head["x"] > neck["x"]:
+        last_move = "right"
+    elif head["x"] < neck["x"]:
+        last_move = "left"
+    elif head["y"] < neck["y"]:
+        last_move = "up"
+    elif head["y"] > neck["y"]:
+        last_move = "down"
+    directions = ['up', 'right', 'down', 'left']
+    idx = directions.index(last_move)
+    direction = directions[(idx+1)%4]
+    return direction
+
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -218,6 +238,10 @@ def move():
     #print(json.dumps(data))
     print("Turn: {}".format(data["turn"]))
 
+    # Streching.
+    if data["turn"] < 4:
+        return move_response(strech(data))
+
     if data["you"]["health"] < 50:
         # Go for a food.
         direction = dijkstra(data, False)
@@ -229,7 +253,7 @@ def move():
         if direction == False:
             direction = dijkstra(data, False)
 
-    print(direction)
+    #print(direction)
     return move_response(direction)
 
 
