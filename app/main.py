@@ -211,12 +211,9 @@ def move():
 
     #print(json.dumps(data))
 
-    # The dumbest way...
-    #return move_response(self_loop(data))
-
     # Avoid being killed.
 
-    # Kill snake in parallel.
+    # Kill snake.
 
     if data["you"]["health"] < 50:
         # Go for a food.
