@@ -125,6 +125,7 @@ def dijkstra(data, self_loop):
     you_body = []
     for cell in data["you"]["body"]:
         you_body += [(cell["x"], cell["y"])]
+
     if not self_loop:
         blocked += you_body[1:]
     else:
@@ -157,31 +158,38 @@ def dijkstra(data, self_loop):
         foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
         foods_sorted = [food[0] for food in foods_sorted]
 
+        direction = None
         for food in foods_sorted:
             # If the nearest food can not be reached, go for the next nearest one.
             try:
                 nodes = find_path(graph, head, food, cost_func=cost_func).nodes
-                print("Going for food {}.".format(food))
+                print("Testing for food {}.".format(food))
+                next_block = nodes[1]
+                if head[0] == next_block[0] and head[1] > next_block[1]:
+                    direction = "up"
+                elif head[0] == next_block[0] and head[1] < next_block[1]:
+                    direction = "down"
+                elif head[0] < next_block[0] and head[1] == next_block[1]:
+                    direction = "right"
+                else:
+                    direction = "left"
                 if deadend(data, nodes, you_body, [food], 1):
                     print("Dead-end.")
                     continue
                 else:
-                    next_block = nodes[1]
-                    if head[0] == next_block[0] and head[1] > next_block[1]:
-                        return "up"
-                    elif head[0] == next_block[0] and head[1] < next_block[1]:
-                        return "down"
-                    elif head[0] < next_block[0] and head[1] == next_block[1]:
-                        return "right"
-                    else:
-                        return "left"
+                    print("OK, {}".format(direction))
+                    return direction
+            # No path.
             except Exception as e:
                 print(e)
                 continue
 
-        # ..Where do we go now?
-        print("Who am I? Where am I?")
-        return False
+        if direction != None:
+            return direction
+        else:
+            # ..Where do we go now?
+            print("Who am I? Where am I?")
+            return False
 
     else:
         tail = you_body[-1]
@@ -222,8 +230,7 @@ def strech(data):
         last_move = "down"
     directions = ['up', 'right', 'down', 'left']
     idx = directions.index(last_move)
-    direction = directions[(idx+1)%4]
-    return direction
+    return directions[(idx+1)%4]
 
 
 @bottle.post('/move')
@@ -242,7 +249,7 @@ def move():
     if data["turn"] < 4:
         return move_response(strech(data))
 
-    if data["you"]["health"] < 50:
+    if data["you"]["health"] < 100:
         # Go for a food.
         direction = dijkstra(data, False)
         if direction == False:
@@ -253,7 +260,7 @@ def move():
         if direction == False:
             direction = dijkstra(data, False)
 
-    #print(direction)
+    print(direction)
     return move_response(direction)
 
 
