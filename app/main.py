@@ -44,12 +44,13 @@ def start():
     """
     #print(json.dumps(data))
 
-    color = "#00FF00"
+    color = "#00FFFF"
 
     return start_response(color)
 
 
-def deadend(data, path, you_body, depth):
+# foods_eaten: list of food that will be eaten in the deadend test.
+def deadend(data, path, you_body, foods_eaten, depth):
     if depth == 3:
         return False
 
@@ -96,14 +97,18 @@ def deadend(data, path, you_body, depth):
         key = (food["x"], food["y"])
         foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
     foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
+    foods_sorted = [food[0] for food in foods_sorted]
 
-    # Skip the nearest ones that have been eaten.
-    for food in foods_sorted[depth:]:
+    # Skip the foods that will been eaten.
+    for food in foods_eaten:
+        foods_sorted.remove(food)
+
+    for food in foods_sorted:
         # If the nearest food can not be reached, go for the next nearest one.
         try:
-            nodes = find_path(graph, head, food[0], cost_func=cost_func).nodes
-            print("Can still go for food {}.".format(food[0]))
-            return deadend(data, nodes, you_body, depth+1)
+            nodes = find_path(graph, head, food, cost_func=cost_func).nodes
+            print("Can still go for food {}.".format(food))
+            return deadend(data, nodes, you_body, foods_eaten+[food], depth+1)
         except Exception:
             continue
     return True
@@ -150,13 +155,14 @@ def dijkstra(data, self_loop):
             key = (food["x"], food["y"])
             foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
         foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
+        foods_sorted = [food[0] for food in foods_sorted]
 
         for food in foods_sorted:
             # If the nearest food can not be reached, go for the next nearest one.
             try:
-                nodes = find_path(graph, head, food[0], cost_func=cost_func).nodes
-                print("Going for food {}.".format(food[0]))
-                if deadend(data, nodes, you_body, 1):
+                nodes = find_path(graph, head, food, cost_func=cost_func).nodes
+                print("Going for food {}.".format(food))
+                if deadend(data, nodes, you_body, [food], 1):
                     print("Dead-end.")
                     continue
                 else:
@@ -181,7 +187,6 @@ def dijkstra(data, self_loop):
         try:
             nodes = find_path(graph, head, tail, cost_func=cost_func).nodes
             print("Going for tail at {}.".format(tail))
-            print(nodes)
             #if deadend(data, nodes, you_body, 1):
             #    print("Dead-end.")
             #    continue
@@ -210,6 +215,7 @@ def move():
     """
 
     #print(json.dumps(data))
+    print("Turn: {}".format(data["turn"]))
 
     if data["you"]["health"] < 50:
         # Go for a food.
@@ -234,7 +240,7 @@ def end():
     TODO: If your snake AI was stateful,
         clean up any stateful objects here.
     """
-    print(json.dumps(data))
+    #print(json.dumps(data))
 
     return end_response()
 
