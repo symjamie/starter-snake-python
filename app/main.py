@@ -49,6 +49,49 @@ def start():
     return start_response(color)
 
 
+def head2head(data):
+    body_you = data["you"]["body"]
+    head_you = body_you[0]
+    hitpoints = []
+    for snake in data["board"]["snakes"]:
+        body = snake["body"]
+        head = body[0]
+        win = len(body_you) > len(body)
+        if win:
+            continue
+        # Distance of 2.
+        # Horizontal.
+        if abs(head_you["x"]-head["x"]==2) and head_you["y"] == head["y"]:
+            hitpoints += [int(((head_you["x"]+head["x"])/2), head["y"])]
+        # Vertical.
+        elif abs(head_you["y"]-head["y"]==2) and head_you["x"] == head["x"]:
+            hitpoints += [(head["x"], int((head_you["y"]+head["y"])/2))]
+        # Distance of sqrt(2).
+        elif abs(head_you["x"]-head["x"]==1) and abs(head_you["y"]-head["y"]==1):
+            hitpoints += [(head_you["x"], head["y"]), (head["x"], head_you["y"])]
+        # Just look at one dangerous snake.
+        if hitpoints != []:
+            return hitpoints
+    # Consider all dangerous snakes.
+    return hitpoints
+
+
+def make_graph(data, blocked):
+    graph = Graph()
+    #print("Edges: ", end="")
+    for x in range(0, data["board"]["width"]):
+        for y in range(0, data["board"]["height"]):
+            if (x, y) in blocked:
+                continue
+            if (x+1, y) not in blocked and x != data["board"]["width"]-1:
+                graph.add_edge((x, y), (x+1, y), {'cost': 1})
+                graph.add_edge((x+1, y), (x, y), {'cost': 1})
+            if (x, y+1) not in blocked and y != data["board"]["height"]-1:
+                graph.add_edge((x, y), (x, y+1), {'cost': 1})
+                graph.add_edge((x, y+1), (x, y), {'cost': 1})
+    return graph
+
+
 # foods_eaten: list of food that will be eaten in the deadend test.
 def deadend(data, path, you_body, foods_eaten, depth):
     if depth == 3:
@@ -69,54 +112,53 @@ def deadend(data, path, you_body, foods_eaten, depth):
             blocked += [(cell["x"], cell["y"])]
 
     # Your body after eating the target food.
-    you_body = (list(reversed(path[1:])) + you_body)[:-(steps+1)]
+    you_body = (list(reversed(path[1:])) + you_body)[:-steps]
     blocked += you_body[1:]
-
-    #print("blocked: {}".format(blocked))
-
-    graph = Graph()
-    #print("Edges: ", end="")
-    for x in range(0, data["board"]["width"]):
-        for y in range(0, data["board"]["height"]):
-            if (x, y) in blocked:
-                continue
-            if (x+1, y) not in blocked and x != data["board"]["width"]-1:
-                graph.add_edge((x, y), (x+1, y), {'cost': 1})
-                graph.add_edge((x+1, y), (x, y), {'cost': 1})
-                #print("({}, {})-({}, {}) ".format(x, y, x+1, y), end="")
-            if (x, y+1) not in blocked and y != data["board"]["height"]-1:
-                graph.add_edge((x, y), (x, y+1), {'cost': 1})
-                graph.add_edge((x, y+1), (x, y), {'cost': 1})
-                #print("({}, {})-({}, {}) ".format(x, y, x, y+1), end="")
-    #print()
+    head = you_body[0]
+    tail = you_body[-1]
     cost_func = lambda u, v, e, prev_e: e['cost']
 
-    head = you_body[0]
+    # Test if it can still go for its tail.
+    # You will EAT your own tail.
+    if abs(head[0]-tail[0])+abs(head[1]-tail[1]) == 1:
+        print("\tCannot go for tail at {} (head is next to tail).".format(tail))
+    # Safe, remove tail from blocked.
+    else:
+        blocked1 = blocked[:-1]
+        graph1 = make_graph(data, blocked1)
+        try:
+            nodes = find_path(graph1, head, tail, cost_func=cost_func).nodes
+            print("\tCan still go for tail at {}.".format(tail))
+            return False
+        except Exception:
+            print("\tCannot go for tail at {}.".format(tail))
+
+    # Test if it can still go for the next food.
+    graph = make_graph(data, blocked)
     foods = {}
     for food in data["board"]["food"]:
         key = (food["x"], food["y"])
         foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
     foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
     foods_sorted = [food[0] for food in foods_sorted]
-
     # Skip the foods that will been eaten.
     for food in foods_eaten:
         foods_sorted.remove(food)
-
     for food in foods_sorted:
         # If the nearest food can not be reached, go for the next nearest one.
         try:
             nodes = find_path(graph, head, food, cost_func=cost_func).nodes
-            print("Can still go for food {}.".format(food))
+            print("\tCan still go for food at {}.".format(food))
             return deadend(data, nodes, you_body, foods_eaten+[food], depth+1)
         except Exception:
             continue
+
     return True
 
 
 # self_loop: go for the nearest food if false, else go for own tail.
-def dijkstra(data, self_loop):
-    blocked = []
+def dijkstra(data, self_loop, hitpoints):
+    blocked = hitpoints
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
@@ -136,21 +178,7 @@ def dijkstra(data, self_loop):
         else:
             blocked += you_body[1:-1]
 
-    graph = Graph()
-    #print("Edges: ", end="")
-    for x in range(0, data["board"]["width"]):
-        for y in range(0, data["board"]["height"]):
-            if (x, y) in blocked:
-                continue
-            if (x+1, y) not in blocked and x != data["board"]["width"]-1:
-                graph.add_edge((x, y), (x+1, y), {'cost': 1})
-                graph.add_edge((x+1, y), (x, y), {'cost': 1})
-                #print("({}, {})-({}, {}) ".format(x, y, x+1, y), end="")
-            if (x, y+1) not in blocked and y != data["board"]["height"]-1:
-                graph.add_edge((x, y), (x, y+1), {'cost': 1})
-                graph.add_edge((x, y+1), (x, y), {'cost': 1})
-                #print("({}, {})-({}, {}) ".format(x, y, x, y+1), end="")
-    #print()
+    graph = make_graph(data, blocked)
     cost_func = lambda u, v, e, prev_e: e['cost']
 
     head = you_body[0]
@@ -159,6 +187,8 @@ def dijkstra(data, self_loop):
         foods = {}
         for food in data["board"]["food"]:
             key = (food["x"], food["y"])
+            if key in hitpoints:
+                continue
             foods[key] = abs(head[0] - food["x"]) + abs(head[1] - food["y"])
         foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
         foods_sorted = [food[0] for food in foods_sorted]
@@ -185,7 +215,7 @@ def dijkstra(data, self_loop):
                     return direction
             # No path.
             except Exception as e:
-                print(e)
+                #print(e)
                 continue
 
         if direction != None:
@@ -213,8 +243,10 @@ def dijkstra(data, self_loop):
                 return "right"
             else:
                 return "left"
-        except Exception:
+        except Exception as e:
             print("Can not find a way to own tail.")
+            print(blocked)
+            print(e)
             return False
 
 
@@ -247,7 +279,11 @@ def move():
     """
 
     #print(json.dumps(data))
-    print("Turn: {}".format(data["turn"]))
+    print("Snake: {},Turn: {}".format(data["you"]["name"], data["turn"]))
+
+    hitpoints = head2head(data)
+    if hitpoints != []:
+        print("Hitpoints: {}".format(hitpoints))
 
     # Streching.
     if data["turn"] < 4:
@@ -255,14 +291,14 @@ def move():
 
     if data["you"]["health"] < 100:
         # Go for a food.
-        direction = dijkstra(data, False)
+        direction = dijkstra(data, False, hitpoints)
         if direction == False:
-            direction = dijkstra(data, True)
+            direction = dijkstra(data, True, hitpoints)
 
     else:
-        direction = dijkstra(data, True)
+        direction = dijkstra(data, True, hitpoints)
         if direction == False:
-            direction = dijkstra(data, False)
+            direction = dijkstra(data, False, hitpoints)
 
     #print(direction)
     return move_response(direction)
