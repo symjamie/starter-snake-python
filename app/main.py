@@ -451,8 +451,8 @@ def move():
 
     if direction == False and direction_temp != False:
         return direction_temp
-
-    direction = xiajibazou(data)
+    if direction == False:
+        direction = xiajibazou(data)
 
     return move_response(direction)
 
