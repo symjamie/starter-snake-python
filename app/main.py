@@ -157,7 +157,7 @@ def make_graph(data, blocked):
 
 # foods_eaten: list of food that will be eaten in the deadend test.
 def deadend(data, path, you_body, foods_eaten, depth):
-    if depth == 4:
+    if depth == 4 or depth > len(data["board"]["food"]):
         return False
 
     steps = len(path)-1
