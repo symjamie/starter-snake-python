@@ -472,6 +472,8 @@ def move():
     if direction == False:
         direction = xiajibazou(data, hitpoints)
 
+    if direction == false:
+        direction = "right"
     return move_response(direction)
 
 
