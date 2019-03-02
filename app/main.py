@@ -350,7 +350,7 @@ def survive(data, idx, hitpoints):
     head = you_body[0]
     target = you_body[idx]
     if abs(head[0] - target[0]) + abs(head[1] - target[1]) == 1:
-        return survive(data, idx+1)
+        return survive(data, idx+1, hitpoints)
 
     print("Index: {}, target: {}.".format(idx, target))
     del you_body[idx]
@@ -373,7 +373,7 @@ def survive(data, idx, hitpoints):
             return "left"
     except Exception as e:
         print(e)
-        return survive(data, idx+1)
+        return survive(data, idx+1, hitpoints)
 
 @bottle.post('/move')
 def move():
