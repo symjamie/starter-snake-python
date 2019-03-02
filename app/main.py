@@ -238,9 +238,23 @@ def dijkstra(data, self_loop, hitpoints):
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
-        for cell in snake["body"]:
+        body = snake["body"]
+        head = body[0]
+        for cell in body:
             blocked += [(cell["x"], cell["y"])]
-        blocked = blocked[:-1]
+        # If there is no food around this snake.
+        up = {"x": head["x"], "y": head["y"]-1}
+        down = {"x": head["x"], "y": head["y"]+1}
+        left = {"x": head["x"]-1, "y": head["y"]}
+        right = {"x": head["x"]+1, "y": head["y"]}
+        flag = False
+        for cell in [up, down, left, right]:
+            if cell in data["board"]["food"]:
+                flag = True
+                break
+        if flag == False:
+            blocked = blocked[:-1]
+
     you_body = []
     for cell in data["you"]["body"]:
         you_body += [(cell["x"], cell["y"])]
@@ -392,6 +406,7 @@ def survive(data, idx, hitpoints):
 
 
 def xiajibazou(data, hitpoints):
+    print("xiajibazou")
     blocked = hitpoints
     for snake in data["board"]["snakes"]:
         for cell in snake["body"]:
@@ -455,6 +470,7 @@ def move():
 
     if direction == False and direction_temp != False:
         return direction_temp
+
     if direction == False:
         direction = xiajibazou(data, hitpoints)
 
