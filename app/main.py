@@ -181,7 +181,7 @@ def deadend(data, path, you_body, foods_eaten, depth):
         if (food["x"], food["y"]) in foods_eaten:
             continue
         if (food["x"], food["y"]) in path:
-            steps += 1
+            steps -= 1
 
     you_body = (list(reversed(path[1:])) + you_body)[:-steps]
     blocked += you_body[1:]
