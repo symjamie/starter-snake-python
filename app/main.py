@@ -332,12 +332,12 @@ def strech(data):
     return directions[(idx+1)%4]
 
 
-def survive(data, idx):
+def survive(data, idx, hitpoints):
     if idx == len(data["you"]["body"]):
         print("GOODBYE WORLD!!!")
         return False
 
-    blocked = []
+    blocked = hitpoints
     for snake in data["board"]["snakes"]:
         if snake == data["you"]:
             continue
@@ -413,7 +413,7 @@ def move():
     # Find the closest cell on your body to your tail that you can go for.
     if direction == False:
         print("Trying to survive...")
-        direction = survive(data, 2)
+        direction = survive(data, 2, hitpoints)
 
     if direction == False and direction_temp != False:
         return direction_temp
