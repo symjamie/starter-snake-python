@@ -175,6 +175,14 @@ def deadend(data, path, you_body, foods_eaten, depth):
             blocked += [(cell["x"], cell["y"])]
 
     # Your body after eating the target food.
+    # For self loop, consider the foods on the path.
+    foods = []
+    for food in data["board"]["food"]:
+        if (food["x"], food["y"]) in foods_eaten:
+            continue
+        if (food["x"], food["y"]) in path:
+            steps += 1
+
     you_body = (list(reversed(path[1:])) + you_body)[:-steps]
     blocked += you_body[1:]
     head = you_body[0]
@@ -353,8 +361,9 @@ def survive(data, idx, hitpoints):
         return survive(data, idx+1, hitpoints)
 
     print("Index: {}, target: {}.".format(idx, target))
-    del you_body[idx]
     blocked += you_body[1:]
+    while target in blocked:
+        blocked.remove(target)
 
     graph = make_graph(data, blocked)
     cost_func = lambda u, v, e, prev_e: e['cost']
@@ -394,7 +403,6 @@ def move():
     flag = False
     # Streching.
     if data["turn"] < 2:
-        # SHUA ZAI LIAN SHANG
         return move_response(strech(data))
 
     if data["you"]["health"] < 100:
