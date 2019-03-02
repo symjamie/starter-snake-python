@@ -389,8 +389,8 @@ def survive(data, idx, hitpoints):
         return survive(data, idx+1, hitpoints)
 
 
-def xiajibazou(data):
-    blocked = []
+def xiajibazou(data, hitpoints):
+    blocked = hitpoints
     for snake in data["board"]["snakes"]:
         for cell in snake["body"]:
             blocked += [(cell["x"], cell["y"])]
@@ -409,6 +409,8 @@ def xiajibazou(data):
     right = (head_you["x"]+1, head_you["y"]) if head_you["x"]+1 < bound else False
     if not right in blocked and right != False:
         return "right"
+    return(data, [])
+
 
 @bottle.post('/move')
 def move():
