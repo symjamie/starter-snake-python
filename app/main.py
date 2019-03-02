@@ -52,27 +52,35 @@ def start():
 def head2head(data):
     body_you = data["you"]["body"]
     head_you = body_you[0]
+    #print(head_you)
     hitpoints = []
     for snake in data["board"]["snakes"]:
+        if snake == data["you"]:
+            continue
         body = snake["body"]
         head = body[0]
-        win = len(body_you) > len(body)
-        if win:
+        if len(body_you) > len(body):
             continue
+        #print("Snake {}'s head: {}".format(snake["name"], head))
         # Distance of 2.
         # Horizontal.
-        if abs(head_you["x"]-head["x"]==2) and head_you["y"] == head["y"]:
-            hitpoints += [int(((head_you["x"]+head["x"])/2), head["y"])]
+        if abs(head_you["x"]-head["x"])==2 and head_you["y"] == head["y"]:
+            print("Will have collision(2) with snake {}.".format(snake["name"]))
+            hitpoints += [(int((head_you["x"]+head["x"])/2), head["y"])]
         # Vertical.
-        elif abs(head_you["y"]-head["y"]==2) and head_you["x"] == head["x"]:
+        elif abs(head_you["y"]-head["y"])==2 and head_you["x"] == head["x"]:
+            print("Will have collision(2) with snake {}.".format(snake["name"]))
             hitpoints += [(head["x"], int((head_you["y"]+head["y"])/2))]
         # Distance of sqrt(2).
-        elif abs(head_you["x"]-head["x"]==1) and abs(head_you["y"]-head["y"]==1):
+        elif abs(head_you["x"]-head["x"])==1 and abs(head_you["y"]-head["y"])==1:
+            print("Will have collision(sqrt(2)) with snake {}.".format(snake["name"]))
             hitpoints += [(head_you["x"], head["y"]), (head["x"], head_you["y"])]
         # Just look at one dangerous snake.
         if hitpoints != []:
+            print(hitpoints)
             return hitpoints
     # Consider all dangerous snakes.
+    print(hitpoints)
     return hitpoints
 
 
@@ -168,20 +176,22 @@ def dijkstra(data, self_loop, hitpoints):
     for cell in data["you"]["body"]:
         you_body += [(cell["x"], cell["y"])]
 
-    if not self_loop:
-        blocked += you_body[1:]
-    else:
-        # Just ate a food.
-        dist = abs(you_body[0][0] - you_body[-1][0]) + abs(you_body[0][1] - you_body[-1][1])
-        if you_body[-1] == you_body[-2] and dist > 1:
-            blocked += you_body[1:-2]
-        else:
-            blocked += you_body[1:-1]
+    head = you_body[0]
+    tail = you_body[-1]
+    blocked += you_body[1:-1]
+
+    if self_loop:
+        if you_body[-1] == you_body[-2]:
+            if abs(head[0] - tail[0]) + abs(head[1] - tail[1]) == 1:
+                return False
+            else:
+                while tail in blocked:
+                    blocked.remove(tail)
+
 
     graph = make_graph(data, blocked)
     cost_func = lambda u, v, e, prev_e: e['cost']
 
-    head = you_body[0]
 
     if not self_loop:
         foods = {}
@@ -193,7 +203,7 @@ def dijkstra(data, self_loop, hitpoints):
         foods_sorted = sorted(foods.items(), key=operator.itemgetter(1))
         foods_sorted = [food[0] for food in foods_sorted]
 
-        direction = None
+        direction = False
         for food in foods_sorted:
             # If the nearest food can not be reached, go for the next nearest one.
             try:
@@ -212,21 +222,20 @@ def dijkstra(data, self_loop, hitpoints):
                     print("Dead-end.")
                     continue
                 else:
-                    return direction
+                    return True, direction
             # No path.
             except Exception as e:
                 #print(e)
                 continue
 
         if direction != None:
-            return direction
+            return False, direction
         else:
             # ..Where do we go now?
-            print("Who am I? Where am I?")
-            return False
+            #print("Who am I? Where am I?")
+            return False, False
 
     else:
-        tail = you_body[-1]
         try:
             nodes = find_path(graph, head, tail, cost_func=cost_func).nodes
             print("Going for tail at {}.".format(tail))
@@ -236,18 +245,17 @@ def dijkstra(data, self_loop, hitpoints):
             #else:
             next_block = nodes[1]
             if head[0] == next_block[0] and head[1] > next_block[1]:
-                return "up"
+                return True, "up"
             elif head[0] == next_block[0] and head[1] < next_block[1]:
-                return "down"
+                return True, "down"
             elif head[0] < next_block[0] and head[1] == next_block[1]:
-                return "right"
+                return True, "right"
             else:
-                return "left"
+                return True, "left"
         except Exception as e:
             print("Can not find a way to own tail.")
-            print(blocked)
             print(e)
-            return False
+            return False, False
 
 
 def strech(data):
@@ -269,6 +277,48 @@ def strech(data):
     return directions[(idx+1)%4]
 
 
+def survive(data, idx):
+    print(idx)
+    if -idx == len(data["you"]["body"]):
+        print("GOODBYE WORLD!!!")
+        return False
+
+    blocked = []
+    for snake in data["board"]["snakes"]:
+        if snake == data["you"]:
+            continue
+        for cell in snake["body"]:
+            blocked += [(cell["x"], cell["y"])]
+    you_body = []
+    for cell in data["you"]["body"]:
+        you_body += [(cell["x"], cell["y"])]
+
+    #target = you_body[cell]
+    #you_body.remove(target)
+    del you_body[idx]
+    blocked += you_body[1:]
+
+    graph = make_graph(data, blocked)
+    cost_func = lambda u, v, e, prev_e: e['cost']
+
+    head = you_body[0]
+
+    try:
+        nodes = find_path(graph, head, target, cost_func=cost_func).nodes
+        print("Going for cell at {}.".format(cell))
+        next_block = nodes[1]
+        if head[0] == next_block[0] and head[1] > next_block[1]:
+            return "up"
+        elif head[0] == next_block[0] and head[1] < next_block[1]:
+            return "down"
+        elif head[0] < next_block[0] and head[1] == next_block[1]:
+            return "right"
+        else:
+            return "left"
+    except Exception as e:
+        #print("Can not find a way to own tail.")
+        return survive(data, idx-1)
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -285,20 +335,34 @@ def move():
     if hitpoints != []:
         print("Hitpoints: {}".format(hitpoints))
 
+    flag = False
     # Streching.
     if data["turn"] < 4:
+        # SHUA ZAI LIAN SHANG
         return move_response(strech(data))
 
-    if data["you"]["health"] < 100:
+    if data["you"]["health"] < 80:
         # Go for a food.
-        direction = dijkstra(data, False, hitpoints)
-        if direction == False:
-            direction = dijkstra(data, True, hitpoints)
+        flag, direction = dijkstra(data, False, hitpoints)
+        if flag == False:
+            flag, direction = dijkstra(data, True, hitpoints)
 
     else:
-        direction = dijkstra(data, True, hitpoints)
-        if direction == False:
-            direction = dijkstra(data, False, hitpoints)
+        flag, direction = dijkstra(data, True, hitpoints)
+        if flag == False:
+            flag, direction = dijkstra(data, False, hitpoints)
+
+    direction_temp = direction
+
+    # Find the closest cell on your body to your tail that you can go for.
+    if direction == False:
+        print("Trying to survive...")
+        direction = survive(data, -2)
+
+    if direction == False and direction_temp != False:
+        return direction_temp
+
+    # GOU HUO
 
     #print(direction)
     return move_response(direction)
