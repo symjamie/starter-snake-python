@@ -388,6 +388,28 @@ def survive(data, idx, hitpoints):
         print(e)
         return survive(data, idx+1, hitpoints)
 
+
+def xiajibazou(data):
+    blocked = []
+    for snake in data["board"]["snakes"]:
+        for cell in snake["body"]:
+            blocked += [(cell["x"], cell["y"])]
+    head_you = data["you"]["body"][0]
+    bound = data["board"]["height"]
+
+    up = (head_you["x"], head_you["y"]-1) if head_you["y"]-1 >= 0 else False
+    if not up in blocked and up != False:
+        return "up"
+    down = (head_you["x"], head_you["y"]+1) if head_you["y"]+1 < bound else False
+    if not down in blocked and down != False:
+        return "down"
+    left = (head_you["x"]-1, head_you["y"]) if head_you["x"]-1 >= 0 else False
+    if not left in blocked and left != False:
+        return "left"
+    right = (head_you["x"]+1, head_you["y"]) if head_you["x"]+1 < bound else False
+    if not right in blocked and right != False:
+        return "right"
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -430,9 +452,8 @@ def move():
     if direction == False and direction_temp != False:
         return direction_temp
 
-    # GOU HUO
+    direction = xiajibazou(data)
 
-    #print(direction)
     return move_response(direction)
 
 
