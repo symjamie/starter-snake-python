@@ -240,6 +240,7 @@ def dijkstra(data, self_loop, hitpoints):
             continue
         for cell in snake["body"]:
             blocked += [(cell["x"], cell["y"])]
+        blocked = blocked[:-1]
     you_body = []
     for cell in data["you"]["body"]:
         you_body += [(cell["x"], cell["y"])]
