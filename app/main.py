@@ -46,10 +46,8 @@ def start():
 
     return {
         "color": "#000000",
-        "secondaryColor": "#FF0000",
         "headType": "fang",
         "tailType": "curled",
-        "taunt": "HIA HIA!!"
     }
 
 
