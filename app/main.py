@@ -93,7 +93,8 @@ def head2head(data):
             hitpoints += [(head["x"], int((head_you["y"]+head["y"])/2))]
         # Distance of sqrt(2).
         elif abs(head_you["x"]-head["x"])==1 and abs(head_you["y"]-head["y"])==1:
-            print("Will have collision(sqrt(2)) with snake {}.".format(snake["name"]))
+            #print("Will have collision(sqrt(2)) with snake {}.".format(snake["name"]))
+            print("Will have collision(sqrt(2)).")
             hitpoints += [(head_you["x"], head["y"]), (head["x"], head_you["y"])]
         # Just look at one dangerous snake.
         if hitpoints != []:
