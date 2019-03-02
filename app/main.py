@@ -50,8 +50,23 @@ def start():
 
 
 def head2head(data):
+    blocked = []
+    for snake in data["board"]["snakes"]:
+        if snake == data["you"]:
+            for cell in snake["body"]:
+                blocked += [(cell["x"], cell["y"])]
+            blocked = blocked[:-1]
+        for cell in snake["body"]:
+            blocked += [(cell["x"], cell["y"])]
+    bound = data["board"]["height"]
     body_you = data["you"]["body"]
     head_you = body_you[0]
+
+    up = (head_you["x"], head_you["y"]-1) if head_you["y"]-1 >= 0 else False
+    down = (head_you["x"], head_you["y"]+1) if head_you["y"]+1 < bound else False
+    left = (head_you["x"]-1, head_you["y"]) if head_you["x"]-1 >= 0 else False
+    right = (head_you["x"]+1, head_you["y"]) if head_you["x"]+1 < bound else False
+
     #print(head_you)
     hitpoints = []
     for snake in data["board"]["snakes"]:
@@ -59,6 +74,7 @@ def head2head(data):
             continue
         body = snake["body"]
         head = body[0]
+        neck = body[1]
         if len(body_you) > len(body):
             continue
         #print("Snake {}'s head: {}".format(snake["name"], head))
@@ -78,6 +94,45 @@ def head2head(data):
         # Just look at one dangerous snake.
         if hitpoints != []:
             print(hitpoints)
+            blocked += hitpoints
+            flag = False
+
+            for direction in [up, down, left, right]:
+                if direction not in blocked and direction != False:
+                    flag = True
+                    break
+
+            # No way, have to gamble.
+            if flag == False:
+                # Distance of 2.
+                if len(hitpoints) == 1:
+                    return []
+                # Distance of sqrt(2).
+                else:
+                    # Food.
+                    foods = []
+                    for food in data["board"]["food"]:
+                        foods += (food["x"], food["y"])
+                    for hp in hitpoints:
+                        # Food.
+                        if hp in foods:
+                            print("Keep food in hitpoints.")
+                            return [hp]
+
+                    # Enemy's next move.
+                    if head["x"] > neck["x"]:
+                        next_move = (head["x"]+1, head["y"])
+                    elif head["x"] < neck["x"]:
+                        next_move = (head["x"]-1, head["y"])
+                    elif head["y"] < neck["y"]:
+                        next_move = (head["x"], head["y"]-1)
+                    elif head["y"] > neck["y"]:
+                        next_move = (head["x"], head["y"]+1)
+                    for hp in hitpoints:
+                        if hp == next_move:
+                            print("Keep potential move in hitpoints.")
+                            return [hp]
+
             return hitpoints
     # Consider all dangerous snakes.
     print(hitpoints)
@@ -102,7 +157,7 @@ def make_graph(data, blocked):
 
 # foods_eaten: list of food that will be eaten in the deadend test.
 def deadend(data, path, you_body, foods_eaten, depth):
-    if depth == 3:
+    if depth == 4:
         return False
 
     steps = len(path)-1
@@ -183,7 +238,7 @@ def dijkstra(data, self_loop, hitpoints):
     if self_loop:
         if you_body[-1] == you_body[-2]:
             if abs(head[0] - tail[0]) + abs(head[1] - tail[1]) == 1:
-                return False
+                return False, False
             else:
                 while tail in blocked:
                     blocked.remove(tail)
@@ -272,14 +327,13 @@ def strech(data):
         last_move = "up"
     elif head["y"] > neck["y"]:
         last_move = "down"
-    directions = ['up', 'right', 'down', 'left']
+    directions = ['up', 'right', 'down']
     idx = directions.index(last_move)
     return directions[(idx+1)%4]
 
 
 def survive(data, idx):
-    print(idx)
-    if -idx == len(data["you"]["body"]):
+    if idx == len(data["you"]["body"]):
         print("GOODBYE WORLD!!!")
         return False
 
@@ -293,19 +347,21 @@ def survive(data, idx):
     for cell in data["you"]["body"]:
         you_body += [(cell["x"], cell["y"])]
 
-    #target = you_body[cell]
-    #you_body.remove(target)
+    head = you_body[0]
+    target = you_body[idx]
+    if abs(head[0] - target[0]) + abs(head[1] - target[1]) == 1:
+        return survive(data, idx+1)
+
+    print("Index: {}, target: {}.".format(idx, target))
     del you_body[idx]
     blocked += you_body[1:]
 
     graph = make_graph(data, blocked)
     cost_func = lambda u, v, e, prev_e: e['cost']
 
-    head = you_body[0]
-
     try:
         nodes = find_path(graph, head, target, cost_func=cost_func).nodes
-        print("Going for cell at {}.".format(cell))
+        print("Going for cell at {}.".format(target))
         next_block = nodes[1]
         if head[0] == next_block[0] and head[1] > next_block[1]:
             return "up"
@@ -316,8 +372,8 @@ def survive(data, idx):
         else:
             return "left"
     except Exception as e:
-        #print("Can not find a way to own tail.")
-        return survive(data, idx-1)
+        print(e)
+        return survive(data, idx+1)
 
 @bottle.post('/move')
 def move():
@@ -337,11 +393,11 @@ def move():
 
     flag = False
     # Streching.
-    if data["turn"] < 4:
+    if data["turn"] < 2:
         # SHUA ZAI LIAN SHANG
         return move_response(strech(data))
 
-    if data["you"]["health"] < 80:
+    if data["you"]["health"] < 50:
         # Go for a food.
         flag, direction = dijkstra(data, False, hitpoints)
         if flag == False:
@@ -357,7 +413,7 @@ def move():
     # Find the closest cell on your body to your tail that you can go for.
     if direction == False:
         print("Trying to survive...")
-        direction = survive(data, -2)
+        direction = survive(data, 2)
 
     if direction == False and direction_temp != False:
         return direction_temp
