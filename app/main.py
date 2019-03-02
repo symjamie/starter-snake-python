@@ -44,9 +44,13 @@ def start():
     """
     #print(json.dumps(data))
 
-    color = "#00FFFF"
-
-    return start_response(color)
+    return {
+        "color": "#000000",
+        "secondaryColor": "#FF0000",
+        "headType": "fang",
+        "tailType": "curled",
+        "taunt": "HIA HIA!!"
+    }
 
 
 def head2head(data):
