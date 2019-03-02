@@ -397,7 +397,7 @@ def move():
         # SHUA ZAI LIAN SHANG
         return move_response(strech(data))
 
-    if data["you"]["health"] < 80:
+    if data["you"]["health"] < 100:
         # Go for a food.
         flag, direction = dijkstra(data, False, hitpoints)
         if flag == False:
